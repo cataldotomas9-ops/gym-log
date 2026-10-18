@@ -101,6 +101,21 @@ nav button{flex:1;max-width:180px;margin-inline:auto;min-height:48px;border:0;bo
 nav button[aria-current=true]{background:var(--soft);color:var(--accent)}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:99px;font-size:.85rem;z-index:9}
 @media (prefers-reduced-motion:no-preference){.bar i{transition:width .25s}}
+
+.meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.85rem;color:var(--mut)}
+.meta b{color:var(--fg);font-weight:600}
+.pics{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pics figure{margin:0;display:flex;flex-direction:column;gap:4px;min-width:0}
+.pics img{width:100%;height:auto;border-radius:10px;background:var(--line);display:block}
+.pics figcaption{font-size:.75rem;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+.fh h3{font:700 1.15rem/1.1 var(--display);text-transform:uppercase;letter-spacing:.03em;margin:4px 0 6px}
+.fh ol,.fh ul{margin:0;padding-left:1.2rem;display:flex;flex-direction:column;gap:6px}
+.warn{border:1px solid var(--c);background:var(--soft);border-radius:10px;padding:10px 12px;font-size:.92rem}
+.warn b{color:var(--c)}
+.glist{display:flex;flex-direction:column;gap:8px}
+.grow2{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);text-align:left;font-weight:600;cursor:pointer}
+.grow2 .sub{font-weight:400;color:var(--mut);font-size:.85rem}
+.back{align-self:flex-start}
 </style>
 
 <div class="wrap">
@@ -139,7 +154,116 @@ const SEED_FOODS = [
   { id: 'banana', name: 'Banana', kcal: 89, p: 1.1, c: 23, f: 0.3, unitG: 120, unitName: 'banana' },
   { id: 'leche', name: 'Leche entera', kcal: 61, p: 3.2, c: 4.8, f: 3.3 },
 ];
-const newProfile = () => ({ foods: SEED_FOODS, exercises: [], goal: { kcal: 2450, p: 160, f: 70 }, routines: { A: '', B: '' } });
+/* ---------- Rutina INVICTUS y guía de técnica ---------- */
+const DAYS = { A: 'Día 1 · Torso completo', B: 'Día 2 · Pierna', C: 'Día 3 · Torso y pierna' };
+// Formato de cada línea: Nombre SERIESxREPS[-REPS] [DESCANSOs]
+const SEED_ROUTINES = {
+  A: ['Press de pecho (Hammer) 3x10-12 90s', 'Jalón al pecho 3x10-12 90s', 'Vuelos posteriores 3x12-15 60s', 'Curl de bíceps (Scott) 3x10-12 60s', 'Extensión de tríceps (polea V) 3x12-15 60s', 'Crunch abdominal 3x15-20 45s'].join('\n'),
+  B: ['Prensa a 45° 4x10-12 120s', 'Curl femoral acostado 3x10-12 90s', 'Hip thrust guiado 3x12-15 90s', 'Aductores sentado 3x15 60s', 'Gemelos en prensa 4x15-20 60s', 'Hiperextensiones 3x12-15 60s'].join('\n'),
+  C: ['Extensión de cuádriceps 3x12-15 90s', 'Curl femoral sentado 3x12-15 90s', 'Press plano con mancuernas 3x10-12 90s', 'Remo sentado 3x10-12 90s', 'Elevaciones laterales 3x12-15 60s', 'Elevación de rodillas 3x12-15 60s'].join('\n'),
+};
+
+// img = id del banco de imágenes (free-exercise-db, dominio público). n debe coincidir con el nombre en la rutina.
+const FICHAS = [
+  { n: 'Press de pecho (Hammer)', img: 'Leverage_Chest_Press', eq: 'Máquina Hammer a discos', m: 'Pectoral, tríceps y hombro (parte delantera)',
+    pasos: ['Ajustá el asiento para que las manijas queden a la altura del medio del pecho.', 'Sentate con la espalda y la cabeza apoyadas y los pies firmes en el piso.', 'Llevá los hombros hacia atrás y abajo, pegados al respaldo.', 'Empujá hasta estirar casi del todo los brazos, sin trabar los codos.', 'Volvé lento hasta sentir el pecho estirado, sin apoyar el peso en el tope.'],
+    clave: ['Pecho alto y hombros hacia atrás contra el respaldo (indicación del profe).', 'Como la máquina es guiada, empujá con fuerza y controlá la bajada (unos 2 segundos).', 'Las muñecas quedan rectas, alineadas con los antebrazos.'],
+    errores: ['Despegar la espalda o los hombros del respaldo.', 'Rebotar el peso abajo.', 'Subir los hombros hacia las orejas.', 'Trabar los codos arriba.'] },
+  { n: 'Jalón al pecho', img: 'Wide-Grip_Lat_Pulldown', eq: 'Dorsalera con lingotera, agarre ancho', m: 'Dorsal ancho, bíceps y espalda alta',
+    pasos: ['Ajustá el rodillo para que te sujete los muslos y no te levante.', 'Agarrá la barra un poco más ancho que los hombros.', 'Inclinate apenas hacia atrás, con el pecho afuera.', 'Tirá de la barra hacia la parte alta del pecho llevando los codos hacia la cintura.', 'Apretá la espalda 1 segundo abajo y volvé lento hasta estirar los brazos.'],
+    clave: ['Los codos van hacia la cintura, no hacia atrás (indicación del profe).', 'No te balancees: el torso casi quieto.', 'Pensá en "bajar los codos", no en tirar con las manos.'],
+    errores: ['Tirar con el torso hacia atrás para ayudarte.', 'Bajar la barra detrás de la nuca (castiga los hombros).', 'Encoger los hombros.', 'Soltar el peso de golpe arriba.'] },
+  { n: 'Vuelos posteriores', img: 'Reverse_Machine_Flyes', eq: 'Máquina Peck Fly invertido', m: 'Parte trasera del hombro y espalda alta',
+    pasos: ['Ajustá el asiento para que las manijas queden a la altura de los hombros.', 'Apoyá el pecho en el almohadón y agarrá las manijas con los brazos casi estirados.', 'Abrí los brazos hacia atrás y a los costados hasta quedar alineados con el torso.', 'Pausa de 1 segundo y volvé lento.'],
+    clave: ['Peso liviano: no uses cargas excesivas (indicación del profe).', 'Brazos casi estirados, con los codos apenas flexionados.', 'Sentí el trabajo atrás del hombro, no en el cuello.'],
+    errores: ['Usar mucho peso y balancear el cuerpo.', 'Flexionar mucho los codos (se convierte en un remo).', 'Encoger los hombros.', 'Llevar los brazos más atrás de la línea del torso.'] },
+  { n: 'Curl de bíceps (Scott)', img: 'Preacher_Curl', eq: 'Banco Scott y barra W olímpica (1,10 m)', m: 'Bíceps',
+    pasos: ['Ajustá el banco para que las axilas apoyen en la parte alta del almohadón.', 'Agarrá la barra W por las partes anguladas, con las manos al ancho de los hombros.', 'Bajá hasta estirar casi del todo los brazos, sin trabar los codos.', 'Subí contrayendo fuerte el bíceps arriba y volvé lento.'],
+    clave: ['Axilas bien apoyadas (indicación del profe).', 'Estirá casi por completo abajo y contraé fuerte arriba.', 'Bajá siempre controlado: abajo es donde el bíceps y el codo quedan más expuestos.'],
+    errores: ['Dejar caer el peso en la parte de abajo.', 'Despegar la cola del banco o balancear el cuerpo.', 'Levantar los codos del almohadón al subir.', 'Cargar tanto peso que no podés controlar la bajada.'] },
+  { n: 'Extensión de tríceps (polea V)', img: 'Triceps_Pushdown_-_V-Bar_Attachment', eq: 'Polea (torre de 75 kg) con agarre en V', m: 'Tríceps',
+    pasos: ['Poné la polea arriba con el agarre en V y parate frente a ella, con los pies al ancho de la cadera.', 'Inclinate apenas hacia adelante, con la espalda recta y los codos pegados al cuerpo.', 'Empujá hacia abajo hasta estirar por completo los brazos.', 'Separá ligeramente las manos al final para contraer más (indicación del profe).', 'Volvé controlado hasta que las manos lleguen a la altura del pecho.'],
+    clave: ['Codos pegados al cuerpo y quietos: solo se mueven los antebrazos.', 'Estirá del todo abajo y apretá 1 segundo.', 'Rodillas apenas flexionadas y el peso repartido en los dos pies.'],
+    errores: ['Abrir los codos hacia afuera.', 'Usar el peso del cuerpo para empujar.', 'Mover los hombros.', 'Subir rápido y sin control.'] },
+  { n: 'Crunch abdominal', img: 'Crunches', eq: 'Banco de abdominales', m: 'Abdomen',
+    pasos: ['Acostate con las rodillas flexionadas y los pies firmes.', 'Poné las manos cruzadas sobre el pecho o a los costados de la cabeza, sin tirar del cuello.', 'Enrollá el tronco: despegá los hombros y la parte alta de la espalda.', 'Apretá el abdomen 1 segundo y bajá controlado.'],
+    clave: ['Enrollate sobre vos mismo, no subas con el cuello (indicación del profe).', 'Controlá la bajada para no arquear la zona lumbar.', 'Mirá hacia arriba, con la barbilla despegada del pecho.'],
+    errores: ['Tirar del cuello con las manos.', 'Usar el impulso en vez del abdomen.', 'Subir todo el torso (eso es un abdominal completo).', 'Arquear la lumbar al bajar.'] },
+
+  { n: 'Prensa a 45°', img: 'Leg_Press', eq: 'Prensa de rodamiento lineal', m: 'Cuádriceps, glúteos e isquiotibiales',
+    pasos: ['Sentate con la espalda y la cola bien apoyadas en el respaldo.', 'Poné los pies en el centro de la plataforma, al ancho de los hombros.', 'Sacá los seguros y bajá lento (unos 2 segundos).', 'Bajá hasta donde tu cadera lo permita, sin que la zona lumbar se despegue del asiento (indicación del profe).', 'Empujá con todo el pie, sin trabar las rodillas arriba.', 'Al terminar, poné bien los seguros antes de soltar.'],
+    clave: ['La profundidad la marca tu cadera: si la cola o la zona lumbar se despegan del asiento, ya bajaste de más.', 'Las rodillas siguen la dirección de los pies, sin caerse hacia adentro.', 'No cierres las piernas ni cruces los pies: mantené los pies al ancho de los hombros.'],
+    errores: ['Bajar tanto que la pelvis "se enrolla" y la lumbar se despega.', 'Trabar las rodillas arriba.', 'Rebotar abajo.', 'Dejar las rodillas hacia adentro.'],
+    cuidado: 'Es el ejercicio donde más importa respetar el rango. Si aparece dolor en el costado de la cadera, frená y avisale al profe. Las guías genéricas hablan de bajar hasta 90° de rodilla; en tu caso manda la indicación del profe.' },
+  { n: 'Curl femoral acostado', img: 'Lying_Leg_Curls', eq: 'Camilla de femoral con lingotera', m: 'Isquiotibiales',
+    pasos: ['Acostate boca abajo con las rodillas justo en el borde del banco, alineadas con el eje de la máquina.', 'Apoyá el rodillo sobre los tobillos y asegurate de que quede firme (indicación del profe).', 'Flexioná las rodillas llevando los talones hacia la cola.', 'Pausa de 1 segundo y bajá lento, unos 2 a 3 segundos.'],
+    clave: ['La pelvis pegada a la camilla todo el tiempo (indicación del profe).', 'Movimiento controlado: la bajada también trabaja.', 'Los tobillos y los pies relajados, sin tirar con los dedos.'],
+    errores: ['Levantar la cadera para ayudarte.', 'Usar impulso al subir.', 'Soltar el peso de golpe al bajar.', 'Usar tanto peso que se despega la pelvis.'],
+    cuidado: 'El rodillo apoya sobre los tobillos: si el tobillo lesionado molesta, avisale al profe para ajustar la posición.' },
+  { n: 'Hip thrust guiado', img: 'Barbell_Hip_Thrust', imgNota: 'La foto es de la versión con barra. En la máquina guiada el movimiento es el mismo.', eq: 'Máquina de glúteos con movimiento guiado', m: 'Glúteo mayor',
+    pasos: ['Apoyá la parte alta de la espalda en el respaldo y los pies al ancho de la cadera.', 'Colocá el apoyo de la máquina sobre la cadera, como indique el equipo.', 'Empujá con los talones y subí la cadera hasta alinear el tronco con los muslos.', 'Apretá los glúteos 1 segundo arriba.', 'Bajá controlado sin apoyar el peso de golpe.'],
+    clave: ['Empujá con los talones, no con las puntas.', 'Mentón hacia el pecho y costillas abajo: arriba no arquees la lumbar.', 'Sentí el trabajo en el glúteo, no en la espalda baja.'],
+    errores: ['Arquear la zona lumbar al llegar arriba.', 'Rebotar abajo.', 'Subir con las puntas de los pies.', 'Dejar que las rodillas se cierren.'],
+    cuidado: 'El profe eligió esta máquina para evitar la presión de una barra sobre la cadera. Si el apoyo te queda sobre el hueso del costado de la cadera o te duele, avisale.' },
+  { n: 'Aductores sentado', img: 'Thigh_Adductor', eq: 'Máquina de aducción con lingotera', m: 'Aductores (parte interna del muslo)',
+    pasos: ['Ajustá el tope para empezar con las piernas abiertas hasta un punto cómodo, sin forzar.', 'Sentate con la espalda apoyada y los pies en los apoyos.', 'Juntá las piernas lento hasta la posición neutra.', 'Pausa de 1 segundo y volvé abriendo despacio.'],
+    clave: ['Movimiento pausado: no dejes que el peso abra tus piernas de golpe (indicación del profe).', 'Sirve para dar estabilidad a la cadera.', 'Parar en la posición neutra: las rodillas a la altura una de la otra.'],
+    errores: ['Soltar el peso y que abra las piernas de golpe.', 'Arrancar con las piernas muy abiertas.', 'Pasar la línea media o cruzar las piernas.', 'Usar impulso.'],
+    cuidado: 'Evitá cruzar las piernas y los rangos forzados hacia adentro: es una posición que comprime el tendón del lado de la cadera. Si sentís pinchazo o dolor en el costado, frená y avisale al profe.' },
+  { n: 'Gemelos en prensa', img: 'Calf_Press_On_The_Leg_Press_Machine', eq: 'Prensa a 45°, de rodamiento simple', m: 'Gemelos y sóleo',
+    pasos: ['Sentate en la prensa con las piernas casi estiradas, sin trabar las rodillas.', 'Poné las puntas de los pies en el borde inferior de la plataforma.', 'Bajá los talones para estirar al máximo.', 'Subí en puntas lo más alto que puedas y apretá 1 segundo arriba.'],
+    clave: ['Estiramiento máximo abajo y contracción total arriba (indicación del profe).', 'Las rodillas casi estiradas y fijas: se mueve solo el tobillo.', 'Repeticiones lentas, sin rebote.'],
+    errores: ['Flexionar las rodillas para empujar.', 'Rebotar abajo.', 'Usar tanto peso que el rango queda corto.', 'Trabar las rodillas con fuerza.'],
+    cuidado: 'Trabaja el tobillo en todo el rango. Si el tobillo lesionado molesta al estirar abajo, reducí el recorrido y avisale al profe.' },
+  { n: 'Hiperextensiones', img: 'Hyperextensions_Back_Extensions', eq: 'Banco de espinales', m: 'Espalda baja, glúteos e isquiotibiales',
+    pasos: ['Ajustá el apoyo de la cadera para que el banco quede justo debajo de la cadera, no en el abdomen.', 'Poné los tobillos bajo los rodillos y cruzá los brazos sobre el pecho.', 'Bajá el tronco con la espalda recta hasta sentir estirar atrás de los muslos.', 'Subí hasta quedar alineado: cuerpo recto, sin pasarte.'],
+    clave: ['Subí alineando el cuerpo, sin hiperextender hacia atrás (indicación del profe).', 'Es fundamental para el core bajo.', 'Movimiento lento, con el cuello en línea con la columna.'],
+    errores: ['Pasar la línea recta arqueando la zona lumbar.', 'Subir de golpe o con impulso.', 'Tirar del cuello hacia atrás.', 'Redondear la espalda abajo.'] },
+
+  { n: 'Extensión de cuádriceps', img: 'Leg_Extensions', eq: 'Sillón de cuádriceps con lingotera', m: 'Cuádriceps',
+    pasos: ['Ajustá el respaldo para que las rodillas queden alineadas con el eje de la máquina.', 'Poné el rodillo sobre la parte baja de las espinillas, cerca de los tobillos.', 'Con la espalda apoyada firme, extendé las rodillas hasta estirar al máximo.', 'Aguantá 1 segundo arriba (indicación del profe) y bajá lento.'],
+    clave: ['Espalda apoyada firmemente (indicación del profe).', 'Bajada controlada, unos 2 a 3 segundos.', 'Pensá en apretar el muslo arriba.'],
+    errores: ['Despegar la cola del asiento.', 'Usar impulso para subir.', 'Estirar de golpe y trabar la rodilla.', 'Usar tanto peso que se pierde el control.'],
+    cuidado: 'El rodillo apoya cerca del tobillo: si el tobillo lesionado molesta, avisale al profe para ajustar el apoyo.' },
+  { n: 'Curl femoral sentado', img: 'Seated_Leg_Curl', eq: 'Sillón de femorales con lingotera', m: 'Isquiotibiales',
+    pasos: ['Ajustá el asiento para que las rodillas queden alineadas con el eje de la máquina.', 'Apoyá el rodillo detrás de los tobillos y bajá la almohadilla de los muslos.', 'Flexioná las rodillas llevando los talones hacia abajo y atrás.', 'Pausa de 1 segundo y volvé lento.'],
+    clave: ['Es el mismo concepto que el cuádriceps pero trabajando atrás (indicación del profe).', 'Controlá mucho la fase de retorno.', 'Espalda apoyada y pelvis quieta.'],
+    errores: ['Despegar la espalda del respaldo.', 'Usar impulso.', 'Soltar el peso al volver.', 'No bajar la almohadilla de los muslos.'] },
+  { n: 'Press plano con mancuernas', img: 'Dumbbell_Bench_Press', eq: 'Banco plano y mancuernas de fundición', m: 'Pectoral, hombro (parte delantera) y tríceps',
+    pasos: ['Sentate en el banco con las mancuernas apoyadas sobre los muslos.', 'Recostate y subí las mancuernas hasta el pecho, ayudándote con las rodillas.', 'Apoyá los pies firmes en el piso y juntá los omóplatos hacia atrás y abajo.', 'Bajá las mancuernas hasta el nivel del pecho abierto (indicación del profe).', 'Empujá hacia arriba formando un triángulo imaginario y volvé controlado.', 'Al terminar, apoyá las mancuernas sobre los muslos y sentate; no las tires.'],
+    clave: ['Trabajo de estabilizadores: el movimiento es más inestable que en la máquina.', 'Los codos a unos 45° del tronco, no abiertos en 90°.', 'Muñecas rectas, mancuernas sobre los codos.'],
+    errores: ['Abrir los codos en cruz (castiga los hombros).', 'Rebotar las mancuernas en el pecho.', 'Despegar la cola del banco.', 'Dejar que las mancuernas se vayan hacia adelante.'],
+    cuidado: 'Con cargas altas pedí ayuda para subir y bajar las mancuernas. Mantené los pies al ancho de la cadera, sin cruzar las piernas.' },
+  { n: 'Remo sentado', img: 'Seated_Cable_Rows', eq: 'Remo bajo con lingotera, agarre cerrado', m: 'Espalda media, dorsal y bíceps',
+    pasos: ['Sentate con los pies en los apoyos y las rodillas apenas flexionadas.', 'Agarrá el triángulo con el torso casi vertical y la espalda recta.', 'Tirá llevando los codos hacia atrás, rozando el torso (indicación del profe).', 'Sacá el pecho al final del tirón y apretá 1 segundo.', 'Volvé estirando los brazos de forma controlada, sin redondear la espalda.'],
+    clave: ['Los codos pasan pegados al torso.', 'Sacá el pecho al finalizar el tirón (indicación del profe).', 'El torso casi no se mueve.'],
+    errores: ['Balancear el torso adelante y atrás.', 'Encoger los hombros.', 'Redondear la zona lumbar al estirar.', 'Tirar con los brazos en vez de con la espalda.'] },
+  { n: 'Elevaciones laterales', img: 'Side_Lateral_Raise', eq: 'Mancuernas de goma', m: 'Hombro (deltoides medio)',
+    pasos: ['Parate con los pies al ancho de la cadera, las rodillas apenas flexionadas y una mancuerna en cada mano.', 'Dejá los codos ligeramente flexionados (indicación del profe).', 'Elevá los brazos hacia los costados hasta la línea de los hombros.', 'Bajá lento, unos 2 segundos.'],
+    clave: ['Sentí el deltoides medio y no el cuello (indicación del profe).', 'Pensá en llevar los codos hacia arriba, no las manos.', 'Repartí el peso en los dos pies, sin "colgarte" de una cadera.'],
+    errores: ['Balancear el cuerpo para subir.', 'Subir por encima de la línea de los hombros.', 'Encoger el cuello y el trapecio.', 'Usar tanto peso que se pierde la forma.'],
+    cuidado: 'Es un ejercicio de pie: apoyá el peso parejo en los dos pies para no cargar el lado de la cadera ni el tobillo lesionados.' },
+  { n: 'Elevación de rodillas', img: 'Knee_Hip_Raise_On_Parallel_Bars', eq: 'Máquina de fondos y abdominales, con apoyo de antebrazos', m: 'Abdomen bajo y flexores de cadera',
+    pasos: ['Apoyá la espalda en el respaldo y los antebrazos en los apoyos, con los hombros lejos de las orejas.', 'Dejá las piernas colgando.', 'Subí las rodillas hacia el pecho usando el abdomen, no el balanceo del cuerpo (indicación del profe).', 'Enrollá un poco la pelvis arriba y aguantá 1 segundo.', 'Bajá lento, sin dejar caer el peso bruscamente.'],
+    clave: ['Usá el abdomen, no el impulso.', 'Subí y bajá controlado, sin balanceo.', 'La espalda pegada al respaldo todo el tiempo.'],
+    errores: ['Balancear el cuerpo para subir.', 'Subir solo con los flexores de cadera, sin enrollar la pelvis.', 'Dejar caer las piernas de golpe.', 'Encoger los hombros.'],
+    cuidado: 'Repite una flexión de cadera varias veces. Si molesta adelante o al costado de la cadera, frená y avisale al profe.' },
+];
+const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+const fichaOf = name => FICHAS.find(f => norm(f.n) === norm(name));
+
+const GUIA = [
+  { t: 'Antes de cada sesión', items: ['Calentamiento de 10 minutos: movilidad de cadera controlada (con ladrillos de yoga como soporte) y trabajo aeróbico ligero (bici spinning o battle ropes).', 'Día 2 (pierna): 5 minutos de bici spinning antes de empezar.', 'Llevá agua y respetá los descansos de cada ejercicio.'] },
+  { t: 'Cómo medir el esfuerzo', items: ['RPE 7: te quedan unas 3 repeticiones en reserva. Si te piden 12, deberías sentir que podías hacer 15.', 'RPE 8: te quedan unas 2 repeticiones en reserva.', 'RPE 8,5 a 9: te queda 1 repetición o menos en reserva.', 'Los círculos de la app (fácil, justo, duro) te sirven como referencia de esto.'] },
+  { t: 'Progresión de 3 meses', items: ['Mes 1 (acondicionamiento): foco total en la técnica, con 2 segundos bajando y 1 segundo subiendo. RPE 7.', 'Mes 2 (sobrecarga): más peso en las máquinas guiadas. RPE 8.', 'Mes 3 (hipertrofia): menos repeticiones en los básicos (6 a 8) y más peso. RPE 8,5 a 9. Al final del bloque deberías notar más estabilidad en la cadera.'] },
+  { t: 'Cuidado de la cadera (trocanteritis)', items: ['La compresión del tendón del costado de la cadera aumenta cuando la pierna se cruza hacia adentro (aducción). Por eso se evita cruzar las piernas y estirar la banda iliotibial.', 'No te duermas sobre el lado afectado. Si dormís de costado sobre el otro lado, poné una almohada entre las rodillas.', 'Dolor aceptable durante el ejercicio: hasta 3 de 10, y que no empeore al día siguiente. Las guías clínicas aceptan hasta 3 a 5 de 10; usá el valor más cuidadoso.', 'Señales de que te pasaste: rigidez a la mañana siguiente o dolor de noche. Si pasa, bajá el peso en la próxima sesión y avisale al profe.', 'Aumentá el peso de a poco: la tolerancia del tendón mejora de forma progresiva.'] },
+  { t: 'Frená y avisale al profe si', items: ['Sentís dolor punzante o que sube más de 3 de 10.', 'Aparece dolor en el costado de la cadera al bajar o al juntar las piernas.', 'El tobillo duele al apoyar o al estirar.', 'Sentís mareo, falta de aire o dolor en el pecho.'] },
+  { t: 'Sobre esta guía', items: ['Es información general. La rutina y cualquier ajuste son de tu profe: si te corrige algo distinto, se hace lo que él diga.', 'Las fotos vienen del banco libre free-exercise-db. Los textos los armamos con las indicaciones de la rutina y con guías públicas de fisioterapia (NHS inform, Physiopedia, revisiones en PubMed Central).'] },
+];
+
+const newProfile = () => ({ foods: SEED_FOODS, exercises: [], goal: { kcal: 2450, p: 160, f: 70 }, routines: { ...SEED_ROUTINES } });
+// Si falta algún día de la rutina, se completa con el de INVICTUS (no pisa lo que ya escribiste).
+function ensureRoutines() { const r = (S.profile.routines ||= {}); let ch = false; for (const k of ['A', 'B', 'C']) if (!r[k]?.trim()) { r[k] = SEED_ROUTINES[k]; ch = true; } return ch; }
 
 const S = { tab: 'train', date: TODAY, profile: newProfile(), days: {}, selFood: null };
 const day = () => (S.days[S.date] ||= { workout: [], meals: [], weight: null, waist: null });
@@ -167,6 +291,7 @@ async function init() {
     S.profile = lsGet('gym:profile') || S.profile;
     try { Object.keys(localStorage).filter(k => k.startsWith('gym:day:')).forEach(k => { S.days[k.slice(8)] = lsGet(k); }); } catch {}
   }
+  if (ensureRoutines()) save('profile');
   $('#mode').textContent = mode === 'db'
     ? 'Tus datos se guardan en tu cuenta y los ves igual desde cualquier dispositivo.'
     : 'Tus datos se guardan solo en este celu y la app funciona sin internet.';
@@ -201,24 +326,24 @@ const CHECK = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" strok
 const wDone = w => w.sets.length > 0 && w.sets.length >= (w.target || 0) && w.sets.every(s => s.rpe);
 const setTxt = s => `${r1(s.kg)}×${s.reps}`;
 
-function mkWorkout(ex, target = 3, reps = null) {
+function mkWorkout(ex, target = 3, reps = null, hi = null, rest = null) {
   const last = lastTime(ex);
-  return { ex, target, sets: Array.from({ length: target }, (_, j) => {
+  return { ex, target, lo: reps, hi, rest, sets: Array.from({ length: target }, (_, j) => {
     const s = last && (last.sets[j] || last.sets[last.sets.length - 1]);
     return { kg: s ? s.kg : null, reps: s ? s.reps : reps, rpe: 0 };
   }) };
 }
 function parseRoutine(txt) {
   return (txt || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => {
-    const m = l.match(/^(.*?)\s*(\d+)\s*[x×]\s*(\d+)\s*$/i);
-    return m && m[1].trim() ? { ex: m[1].trim(), target: +m[2], reps: +m[3] } : { ex: l, target: 3, reps: null };
+    const m = l.match(/^(.*?)\s+(\d+)\s*[x×]\s*(\d+)(?:\s*-\s*(\d+))?(?:\s+(\d+)\s*s(?:eg)?)?\s*$/i);
+    return m && m[1].trim() ? { ex: m[1].trim(), target: +m[2], reps: +m[3], hi: m[4] ? +m[4] : null, rest: m[5] ? +m[5] : null } : { ex: l, target: 3, reps: null, hi: null, rest: null };
   });
 }
 
 function viewTrain() {
   const d = day(), ws = d.workout, cur = ws.findIndex(w => !wDone(w));
   const R = S.profile.routines || {};
-  const hasR = !!(R.A?.trim() || R.B?.trim());
+  const hasR = !!(R.A?.trim() || R.B?.trim() || R.C?.trim());
   const known = [...new Set([...S.profile.exercises, ...Object.values(S.days).flatMap(x => x.workout.map(w => w.ex))])];
 
   const list = ws.map((w, i) => {
@@ -229,6 +354,8 @@ function viewTrain() {
     return `<section class="card ex-open">
       <div class="row between"><h2 class="grow">${esc(w.ex)}</h2><span class="small mut num">${n}/${tgt}</span>
         <button class="x" data-act="delEx" data-i="${i}" aria-label="Quitar ejercicio">✕</button></div>
+      ${(w.lo || w.rest) ? `<div class="meta">${w.lo ? `<span>Meta: <b>${w.lo}${w.hi ? '–' + w.hi : ''} reps</b></span>` : ''}${w.rest ? `<span>Descanso: <b>${w.rest} s</b></span>` : ''}</div>` : ''}
+      ${fichaOf(w.ex) ? `<button class="btn ghost" data-act="ficha" data-n="${esc(w.ex)}">Cómo se hace</button>` : ''}
       <div class="srow hd"><span>#</span><span>Antes</span><span>kg</span><span>Reps</span><span></span></div>
       ${w.sets.map((s, j) => `<div class="srow ${s.rpe ? '' : 'pend'}" data-i="${i}" data-j="${j}">
         <span class="mut num">${j + 1}</span><span class="small mut num">${last?.sets[j] ? setTxt(last.sets[j]) : '–'}</span>
@@ -241,7 +368,7 @@ function viewTrain() {
     </section>`;
   }).join('');
 
-  const start = !ws.length && hasR ? `<div class="row">${['A', 'B'].filter(k => R[k]?.trim()).map(k => `<button class="btn grow" data-act="start" data-r="${k}">Empezar día ${k}</button>`).join('')}</div>` : '';
+  const start = !ws.length && hasR ? `<div class="exlist">${['A', 'B', 'C'].filter(k => R[k]?.trim()).map(k => `<button class="btn" data-act="start" data-r="${k}">Empezar: ${DAYS[k]}</button>`).join('')}</div>` : '';
   const finished = ws.length && cur === -1 ? '<div class="card" style="text-align:center"><b>Rutina completa.</b><span class="small mut">Anotá lo que quieras sumar abajo o cerrá por hoy.</span></div>' : '';
 
   return `${list ? `<div class="exlist">${list}</div>` : (hasR ? '' : '<div class="card empty">Cargá tu rutina abajo en “Mi rutina”, o agregá un ejercicio suelto. Cada ejercicio se desbloquea cuando completás el anterior.</div>')}
@@ -253,10 +380,37 @@ function viewTrain() {
     </form>
     <details class="card" ${S.routOpen ?? !hasR ? 'open' : ''} data-keep="routOpen"><summary>Mi rutina</summary>
       <form class="add" data-form="routine" style="margin-top:8px">
-        <label class="f full">Día A (un ejercicio por línea, por ejemplo “Press banca 3x8”)<textarea name="A" rows="6">${esc(R.A || '')}</textarea></label>
-        <label class="f full">Día B<textarea name="B" rows="6">${esc(R.B || '')}</textarea></label>
+        <label class="f full">${DAYS.A}. Un ejercicio por línea: nombre, series x repeticiones y descanso (ejemplo: Press banca 3x8-10 90s)<textarea name="A" rows="7">${esc(R.A || '')}</textarea></label>
+        <label class="f full">${DAYS.B}<textarea name="B" rows="7">${esc(R.B || '')}</textarea></label>
+        <label class="f full">${DAYS.C}<textarea name="C" rows="7">${esc(R.C || '')}</textarea></label>
         <button class="btn ghost full">Guardar rutina</button>
       </form></details>`;
+}
+
+function picsOf(f) {
+  return `<div class="pics">${[0, 1].map(n => `<figure><img src="i-${f.img}-${n}.jpg" alt="${esc(f.n)}, posición ${n ? 'final' : 'inicial'}" loading="lazy" onerror="this.closest('figure').remove()"><figcaption>${n ? 'Final' : 'Inicio'}</figcaption></figure>`).join('')}</div>${f.imgNota ? `<div class="small mut">${esc(f.imgNota)}</div>` : ''}`;
+}
+function viewGuide() {
+  if (S.fiche) {
+    const f = fichaOf(S.fiche);
+    if (f) return `<button class="btn ghost back" data-act="gback">‹ ${S.from === 'train' ? 'Volver al entreno' : 'Guía'}</button>
+      <section class="card fh">
+        <h2>${esc(f.n)}</h2>
+        <div class="meta"><span>Equipo: <b>${esc(f.eq)}</b></span><span>Trabaja: <b>${esc(f.m)}</b></span></div>
+        ${picsOf(f)}
+        ${f.cuidado ? `<div class="warn"><b>Cuidado con tu cadera y tu tobillo.</b> ${esc(f.cuidado)}</div>` : ''}
+        <div><h3>Cómo se hace</h3><ol>${f.pasos.map(x => `<li>${esc(x)}</li>`).join('')}</ol></div>
+        <div><h3>Técnica correcta</h3><ul>${f.clave.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
+        <div><h3>Errores que lesionan o restan</h3><ul>${f.errores.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
+        <div class="small mut">Información general. Si el profe te indica algo distinto, se hace lo que él diga.</div>
+      </section>`;
+  }
+  const R = S.profile.routines || {};
+  const days = ['A', 'B', 'C'].map(k => `<section class="card"><h2>${DAYS[k]}</h2><div class="glist">${parseRoutine(R[k]).map(r => { const f = fichaOf(r.ex);
+    const sub = `${r.target} x ${r.reps ?? '?'}${r.hi ? '–' + r.hi : ''}${r.rest ? ' · ' + r.rest + ' s' : ''}`;
+    return f ? `<button class="grow2" data-act="ficha" data-n="${esc(r.ex)}" data-from="guide"><span class="grow" style="flex:1">${esc(r.ex)}<br><span class="sub">${sub}</span></span>›</button>` : `<div class="grow2" style="cursor:default"><span style="flex:1">${esc(r.ex)}<br><span class="sub">${sub} · sin ficha</span></span></div>`; }).join('')}</div></section>`).join('');
+  const gen = GUIA.map(g => `<details class="card" ${g.t === 'Cuidado de la cadera (trocanteritis)' ? 'open' : ''}><summary>${esc(g.t)}</summary><ul style="margin:8px 0 0;padding-left:1.2rem;display:flex;flex-direction:column;gap:6px">${g.items.map(x => `<li>${esc(x)}</li>`).join('')}</ul></details>`).join('');
+  return `<p class="small mut" style="margin:0">Rutina INVICTUS · 3 días por semana · 70 min por sesión. Tocá un ejercicio para ver cómo se hace.</p>${days}${gen}`;
 }
 
 function viewFood() {
@@ -329,13 +483,15 @@ function render() {
   const d = day(), t = totals(d), g = S.profile.goal;
   $('#dlabel').textContent = S.date === TODAY ? 'Hoy · ' + fmt(S.date) : fmt(S.date);
   $('#sum').innerHTML = `<span><b>${r0(t.kcal)}</b> / ${r0(g.kcal)} kcal</span><span>P <b>${r0(t.p)}</b> / ${r0(g.p)} g</span><span>${d.workout.reduce((n, w) => n + w.sets.filter(s => s.rpe).length, 0)} series</span>`;
-  $('#main').innerHTML = { train: viewTrain, food: viewFood, body: viewBody }[S.tab]();
-  $('#tabs').innerHTML = [['train', 'Entreno'], ['food', 'Comida'], ['body', 'Cuerpo']].map(([k, l]) => `<button data-act="tab" data-t="${k}" aria-current="${S.tab === k}">${l}</button>`).join('');
+  $('#main').innerHTML = { train: viewTrain, guide: viewGuide, food: viewFood, body: viewBody }[S.tab]();
+  $('#tabs').innerHTML = [['train', 'Entreno'], ['guide', 'Guía'], ['food', 'Comida'], ['body', 'Cuerpo']].map(([k, l]) => `<button data-act="tab" data-t="${k}" aria-current="${S.tab === k}">${l}</button>`).join('');
 }
 
 /* ---------- Acciones ---------- */
 const act = {
-  tab: ds => { S.tab = ds.t; render(); scrollTo(0, 0); },
+  tab: ds => { S.tab = ds.t; if (ds.t === 'guide') S.fiche = null; render(); scrollTo(0, 0); },
+  ficha: ds => { S.from = ds.from === 'guide' ? 'guide' : 'train'; S.back = S.tab; S.fiche = ds.n; S.tab = 'guide'; render(); scrollTo(0, 0); },
+  gback: () => { S.fiche = null; if (S.from === 'train') S.tab = 'train'; render(); scrollTo(0, 0); },
   prev: () => { S.date = shift(S.date, -1); render(); },
   next: () => { if (S.date < TODAY) { S.date = shift(S.date, 1); render(); } },
   delEx: ds => { day().workout.splice(+ds.i, 1); save(S.date); render(); },
@@ -354,7 +510,7 @@ const act = {
   },
   addSet: ds => { const w = day().workout[+ds.i], l = w.sets[w.sets.length - 1]; w.sets.push({ kg: l?.kg ?? null, reps: l?.reps ?? null, rpe: 0 }); w.target = w.sets.length; save(S.date); render(); },
   lastSet: ds => { const w = day().workout[+ds.i]; if (w.sets.length > 1) { w.sets.pop(); w.target = w.sets.length; save(S.date); render(); } },
-  start: ds => { day().workout.push(...parseRoutine(S.profile.routines[ds.r]).map(r => mkWorkout(r.ex, r.target, r.reps))); save(S.date); render(); },
+  start: ds => { day().workout.push(...parseRoutine(S.profile.routines[ds.r]).map(r => mkWorkout(r.ex, r.target, r.reps, r.hi, r.rest))); save(S.date); render(); },
   delMeal: ds => { day().meals.splice(+ds.i, 1); save(S.date); render(); },
   delFood: ds => { S.profile.foods = S.profile.foods.filter(f => f.id !== ds.id); save('profile'); S.foodOpen = true; render(); },
 };
@@ -381,7 +537,7 @@ const forms = {
     if (!S.profile.exercises.includes(ex)) { S.profile.exercises.push(ex); save('profile'); }
     save(S.date); render();
   },
-  routine: fd => { S.profile.routines = { A: fd.get('A'), B: fd.get('B') }; S.routOpen = false; save('profile'); toast('Rutina guardada.'); render(); },
+  routine: fd => { S.profile.routines = { A: fd.get('A'), B: fd.get('B'), C: fd.get('C') }; S.routOpen = false; save('profile'); toast('Rutina guardada.'); render(); },
   addMeal: fd => {
     const f = S.profile.foods.find(x => x.id === fd.get('food')), q = num(fd.get('qty'));
     if (!f || !q || q <= 0) return toast('Poné la cantidad.');
