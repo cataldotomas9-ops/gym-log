@@ -116,6 +116,7 @@ nav button[aria-current=true]{background:var(--soft);color:var(--accent)}
 .grow2{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);text-align:left;font-weight:600;cursor:pointer}
 .grow2 .sub{font-weight:400;color:var(--mut);font-size:.85rem}
 .back{align-self:flex-start}
+.ex .grow{flex:1;min-width:0;text-align:left}
 </style>
 
 <div class="wrap">
@@ -341,20 +342,22 @@ function parseRoutine(txt) {
 }
 
 function viewTrain() {
-  const d = day(), ws = d.workout, cur = ws.findIndex(w => !wDone(w));
+  const d = day(), ws = d.workout;
   const R = S.profile.routines || {};
   const hasR = !!(R.A?.trim() || R.B?.trim() || R.C?.trim());
   const known = [...new Set([...S.profile.exercises, ...Object.values(S.days).flatMap(x => x.workout.map(w => w.ex))])];
+  // Al abrir un día se muestra abierto el primer ejercicio pendiente; después cada uno se abre y cierra solo cuando lo tocás.
+  if (S.openFor !== S.date) { S.openFor = S.date; const f = ws.findIndex(w => !wDone(w)); S.openIdx = new Set(f >= 0 ? [f] : []); }
 
   const list = ws.map((w, i) => {
-    const tgt = Math.max(w.target || 0, w.sets.length), n = w.sets.filter(s => s.rpe).length;
-    if (cur !== -1 && i > cur) return `<div class="ex lock"><span class="grow">${esc(w.ex)}</span><span class="small num">${tgt} series</span>${LOCK}</div>`;
-    if (i !== cur && S.open !== i) return `<button class="ex fin" data-act="open" data-i="${i}"><span class="grow">${esc(w.ex)}</span><span class="small mut num">${w.sets.map(setTxt).join(' · ')}</span>${CHECK}</button>`;
-    const last = lastTime(w.ex);
+    const tgt = Math.max(w.target || 0, w.sets.length), n = w.sets.filter(s => s.rpe).length, done = wDone(w);
+    if (!S.openIdx.has(i)) return `<button class="ex ${done ? 'fin' : ''}" data-act="toggle" data-i="${i}" aria-expanded="false"><span class="grow">${esc(w.ex)}</span><span class="small mut num">${n}/${tgt}</span>${done ? CHECK : ''}</button>`;
+    const last = lastTime(w.ex), meta = w.lo ? `${w.lo}${w.hi ? '–' + w.hi : ''} reps` : '';
     return `<section class="card ex-open">
       <div class="row between"><h2 class="grow">${esc(w.ex)}</h2><span class="small mut num">${n}/${tgt}</span>
+        <button class="x" data-act="toggle" data-i="${i}" aria-expanded="true" aria-label="Cerrar ejercicio">▴</button>
         <button class="x" data-act="delEx" data-i="${i}" aria-label="Quitar ejercicio">✕</button></div>
-      ${(w.lo || w.rest) ? `<div class="meta">${w.lo ? `<span>Meta: <b>${w.lo}${w.hi ? '–' + w.hi : ''} reps</b></span>` : ''}${w.rest ? `<span>Descanso: <b>${w.rest} s</b></span>` : ''}</div>` : ''}
+      ${(meta || w.rest) ? `<div class="meta">${meta ? `<span>Meta: <b>${meta}</b></span>` : ''}${w.rest ? `<span>Descanso: <b>${w.rest} s</b></span>` : ''}</div>` : ''}
       ${fichaOf(w.ex) ? `<button class="btn ghost" data-act="ficha" data-n="${esc(w.ex)}">Cómo se hace</button>` : ''}
       <div class="srow hd"><span>#</span><span>Antes</span><span>kg</span><span>Reps</span><span></span></div>
       ${w.sets.map((s, j) => `<div class="srow ${s.rpe ? '' : 'pend'}" data-i="${i}" data-j="${j}">
@@ -369,9 +372,9 @@ function viewTrain() {
   }).join('');
 
   const start = !ws.length && hasR ? `<div class="exlist">${['A', 'B', 'C'].filter(k => R[k]?.trim()).map(k => `<button class="btn" data-act="start" data-r="${k}">Empezar: ${DAYS[k]}</button>`).join('')}</div>` : '';
-  const finished = ws.length && cur === -1 ? '<div class="card" style="text-align:center"><b>Rutina completa.</b><span class="small mut">Anotá lo que quieras sumar abajo o cerrá por hoy.</span></div>' : '';
+  const finished = ws.length && ws.every(wDone) ? '<div class="card" style="text-align:center"><b>Rutina completa.</b><span class="small mut">Anotá lo que quieras sumar abajo o cerrá por hoy.</span></div>' : '';
 
-  return `${list ? `<div class="exlist">${list}</div>` : (hasR ? '' : '<div class="card empty">Cargá tu rutina abajo en “Mi rutina”, o agregá un ejercicio suelto. Cada ejercicio se desbloquea cuando completás el anterior.</div>')}
+  return `${list ? `<div class="exlist">${list}</div>` : (hasR ? '' : '<div class="card empty">Cargá tu rutina abajo en “Mi rutina”, o agregá un ejercicio suelto.</div>')}
     ${start}${finished}
     <form class="card add" data-form="addEx">
       <label class="f full">Ejercicio suelto<input name="ex" type="text" list="exlist" autocomplete="off" placeholder="Ej: Sentadilla a cajón" required></label>
@@ -380,9 +383,9 @@ function viewTrain() {
     </form>
     <details class="card" ${S.routOpen ?? !hasR ? 'open' : ''} data-keep="routOpen"><summary>Mi rutina</summary>
       <form class="add" data-form="routine" style="margin-top:8px">
-        <label class="f full">${DAYS.A}. Un ejercicio por línea: nombre, series x repeticiones y descanso (ejemplo: Press banca 3x8-10 90s)<textarea name="A" rows="7">${esc(R.A || '')}</textarea></label>
+        <label class="f full">${DAYS.A}. Un ejercicio por línea: nombre, series x repeticiones (ejemplo: Press banca 3x8-10)<textarea name="A" rows="8">${esc(R.A || '')}</textarea></label>
         <label class="f full">${DAYS.B}<textarea name="B" rows="7">${esc(R.B || '')}</textarea></label>
-        <label class="f full">${DAYS.C}<textarea name="C" rows="7">${esc(R.C || '')}</textarea></label>
+        <label class="f full">${DAYS.C}<textarea name="C" rows="9">${esc(R.C || '')}</textarea></label>
         <button class="btn ghost full">Guardar rutina</button>
       </form></details>`;
 }
@@ -494,8 +497,8 @@ const act = {
   gback: () => { S.fiche = null; if (S.from === 'train') S.tab = 'train'; render(); scrollTo(0, 0); },
   prev: () => { S.date = shift(S.date, -1); render(); },
   next: () => { if (S.date < TODAY) { S.date = shift(S.date, 1); render(); } },
-  delEx: ds => { day().workout.splice(+ds.i, 1); save(S.date); render(); },
-  open: ds => { S.open = S.open === +ds.i ? null : +ds.i; render(); },
+  delEx: ds => { day().workout.splice(+ds.i, 1); S.openIdx = new Set(); save(S.date); render(); },
+  toggle: ds => { const i = +ds.i; (S.openIdx ||= new Set()); S.openIdx.has(i) ? S.openIdx.delete(i) : S.openIdx.add(i); render(); },
   dot: ds => {
     const row = document.querySelector('.srow[data-i="' + ds.i + '"][data-j="' + ds.j + '"]');
     const w = day().workout[+ds.i], s = w.sets[+ds.j];
@@ -505,12 +508,11 @@ const act = {
     s.kg = kg; s.reps = Math.round(reps); s.rpe = (s.rpe + 1) % 4;
     const nx = w.sets[+ds.j + 1];
     if (s.rpe && nx && !nx.rpe) { nx.kg ??= s.kg; nx.reps ??= s.reps; }
-    save(S.date); S.open = null; render();
-    if (!was && wDone(w)) document.querySelector('.ex-open')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    save(S.date); render();
   },
   addSet: ds => { const w = day().workout[+ds.i], l = w.sets[w.sets.length - 1]; w.sets.push({ kg: l?.kg ?? null, reps: l?.reps ?? null, rpe: 0 }); w.target = w.sets.length; save(S.date); render(); },
   lastSet: ds => { const w = day().workout[+ds.i]; if (w.sets.length > 1) { w.sets.pop(); w.target = w.sets.length; save(S.date); render(); } },
-  start: ds => { day().workout.push(...parseRoutine(S.profile.routines[ds.r]).map(r => mkWorkout(r.ex, r.target, r.reps, r.hi, r.rest))); save(S.date); render(); },
+  start: ds => { const d = day(), first = d.workout.length; d.workout.push(...parseRoutine(S.profile.routines[ds.r]).map(r => mkWorkout(r.ex, r.target, r.reps, r.hi, r.rest))); S.openFor = S.date; S.openIdx = new Set([first]); save(S.date); render(); },
   delMeal: ds => { day().meals.splice(+ds.i, 1); save(S.date); render(); },
   delFood: ds => { S.profile.foods = S.profile.foods.filter(f => f.id !== ds.id); save('profile'); S.foodOpen = true; render(); },
 };
@@ -533,7 +535,7 @@ const forms = {
     const ex = fd.get('ex').trim(), d = day();
     if (!ex) return;
     if (d.workout.some(w => w.ex.toLowerCase() === ex.toLowerCase())) return toast('Ese ejercicio ya está hoy.');
-    d.workout.push(mkWorkout(ex, 3));
+    d.workout.push(mkWorkout(ex, 3)); (S.openIdx ||= new Set()).add(d.workout.length - 1);
     if (!S.profile.exercises.includes(ex)) { S.profile.exercises.push(ex); save('profile'); }
     save(S.date); render();
   },
